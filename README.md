@@ -4,6 +4,8 @@ X-WAD is a tool for explainable web anomaly detection using Transformer-based La
 
 This work was initially developed during my master thesis "Explainable Anomaly Detection in Web Data using Transformer-based Language Models".
 
+<video src="https://github.com/user-attachments/assets/02ddc8e2-091a-4ea2-a8a5-f97b39cf8fbb"></video>
+
 ## Features
 
 - Supports both CLM and MLM paradigms for anomaly detection and explainability
