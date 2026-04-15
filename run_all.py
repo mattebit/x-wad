@@ -3,7 +3,6 @@ import os
 
 from common.utils import DATASETS_FOLDER_PATH
 
-srbh_experiments_path = "experiments/srbh2020/"
 SRBH_DATASET_PATH = os.path.join(DATASETS_FOLDER_PATH, "srbh")
 
 PREPROCESS = False
@@ -27,9 +26,9 @@ def build_params():
 
 
 # SRBH
-subprocess.run(["python", "srbh_modern_bert.py"] + build_params() + [SRBH_DATASET_PATH], cwd=srbh_experiments_path)
-#subprocess.run(["python", "srbh_smol.py"] + build_params() + [SRBH_DATASET_PATH], cwd=srbh_experiments_path)
+subprocess.run(["python", "-m", "experiments.srbh2020.srbh_modernbert"] + build_params() + [SRBH_DATASET_PATH])
+subprocess.run(["python", "-m", "experiments.srbh2020.srbh_smol"] + build_params() + [SRBH_DATASET_PATH])
 
 # SRBH-fix
-#subprocess.run(["python", "srbh_fix_modernbert_s.py"] + build_params() + [SRBH_DATASET_PATH], cwd=srbh_experiments_path)
-#subprocess.run(["python", "srbh_fix_smol_s.py"] + build_params() + [SRBH_DATASET_PATH], cwd=srbh_experiments_path)
+subprocess.run(["python", "-m", "experiments.srbh2020.srbh_fix_modernbert_s"] + build_params() + [SRBH_DATASET_PATH])
+subprocess.run(["python", "-m", "experiments.srbh2020.srbh_fix_smol_s"] + build_params() + [SRBH_DATASET_PATH])

@@ -68,7 +68,7 @@ def run_experiment(
             "gradient_accumulation_steps": 60,
             "per_device_eval_batch_size": 45,
             "eval_strategy": "steps",
-            "eval_steps": 500,
+            "eval_steps": 200,
             "load_best_model_at_end": True,
             "metric_for_best_model": "eval_loss",
             "early_stop": True,

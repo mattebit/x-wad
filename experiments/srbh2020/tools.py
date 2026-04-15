@@ -200,6 +200,9 @@ def results_based_on_class_plot(
         stats["fn_rate"] = (stats["fn_count"] / stats["total"])
         stats["Model"] = label
 
+        if stats["fn_rate"] < 0.001:
+            continue
+
         all_stats_list.append(stats)
 
     # Combine all results
@@ -322,7 +325,7 @@ def anomaly_per_class_plot(
         plt.show()
 
 
-def fix_srbh(original_path, output_fix, output_mislabeled="probably_misslabled.csv") -> None:
+def fix_srbh(original_path, output_fix, output_mislabeled="mislabeled_indexes.csv") -> None:
     """
     Takes the processed original SRBH dataset, and relabels samples that contains unusual patterns.
     :param original_path: The source original SRBH dataset (already processed)

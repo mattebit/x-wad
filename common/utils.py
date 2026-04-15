@@ -132,8 +132,8 @@ def get_argument_parser_experiments():
     parser.add_argument(
         "--models-folder-path",
         type=str,
-        default="../../models",
-        help="Directory where trained models will be saved.\n(Default: ../../models)"
+        default="models",
+        help="Directory where trained models will be saved.\n(Default: models)"
     )
     # store_true means if the flag is present, the value is True.
 

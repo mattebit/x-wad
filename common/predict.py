@@ -80,7 +80,8 @@ def prepare_explained_string(
         token_probabilities,
         tokens,
         print_output="terminal",
-        scaled_coloring=True
+        scaled_coloring=True,
+        exclude_special_tokens=True
 ) -> str:
     """
     Function used to prepare the explained strings in the format specified with the "print_output" parameter.
@@ -88,6 +89,7 @@ def prepare_explained_string(
     :param tokens: The tokens list in string format
     :param print_output: The output format of the explained string (terminal, html, latex, latex_text)
     :param scaled_coloring: False to use fixed thresholds, true to use percentile-based coloring
+    :param exclude_special_tokens: If True, exclude special tokens like EOS from the output
     """
     log_string = ""
 
@@ -100,6 +102,11 @@ def prepare_explained_string(
         thresholds = [.1, .2, .80]
 
     for indx, token_id in enumerate(token_probabilities):
+        if tokens[indx] in ['<|endoftext|>', '[EOS]', '</s>', '<EOS>', '[PAD]', '<PAD>']:
+            # Skip if special token
+            # TODO: can be made more efficient
+            continue
+
         actual_token_probability = float(token_id)
 
         if print_output == "terminal":

@@ -17,6 +17,12 @@ This work was initially developed during my master thesis "Explainable Anomaly D
 Install the required dependencies:
 
 ```bash
+# Optionally create venv
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+```bash
 pip install -r requirements.txt
 ```
 
@@ -83,6 +89,10 @@ python run_all.py
 ### Explain the samples
 
 This project is still a prototype and still misses a dedicated UI. In order to visualize the explainability it is possible to use the [explain.py](explain.py) editing it to specify the model to use (that should have previously been trained) and the sample to be explained. The file is configured by default to explain a sample from the srbh fix dataset using SmolLM2-360M.
+
+```bash
+python explain.py
+```
 
 ## Project Structure
 

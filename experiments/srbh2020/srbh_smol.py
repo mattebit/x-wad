@@ -68,7 +68,7 @@ def run_experiment(
             "per_device_train_batch_size": 12,
             "per_device_eval_batch_size": 12,
             "eval_strategy": "steps",
-            "eval_steps": 2000,
+            "eval_steps": 200,
             "load_best_model_at_end": True,
             "metric_for_best_model": "eval_loss",
             "early_stop": True
