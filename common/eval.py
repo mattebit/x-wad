@@ -229,7 +229,7 @@ def evaluate(
         csv_truth: str,
         params: list,
         results_file_path: str,
-        log_all=False
+        log_all=True
 ):
     """
     Evaluate the predictions from the given prediction file and save the results to a file
@@ -278,8 +278,6 @@ def evaluate(
             "fn_indexes",
             "average_anomalies",
             "use_std_as_offset",
-            "moving_average",
-            "moving_average"
         ])
 
     df_out.to_csv(results_file_path)

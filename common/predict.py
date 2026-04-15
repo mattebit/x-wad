@@ -16,7 +16,7 @@ from transformers import AutoModelForMaskedLM, \
     AutoTokenizer, AutoModelForCausalLM
 
 from common.utils import tokenizer_base_args_predict, tokenizer_base_args, get_cpu_count, \
-    model_load_settings_normal
+    model_load_settings_normal, IMAGES_FOLDER_PATH
 
 
 def get_loss_masked_batch(inputs, logits, return_not_sum=False):
@@ -684,7 +684,7 @@ def estimate_threshold_from_predictions(
             plt.ylabel("Probability density")
             plt.xlim([-0.01, 0.2])
             plt.legend()
-            plt.savefig("images/threshold_est.pdf")
+            plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"threshold_est.pdf"))
             plt.show()
 
     elif method == "percentile":
@@ -715,7 +715,7 @@ def estimate_threshold_from_predictions(
             plt.legend()
             plt.tight_layout()
             print(os.getcwd())
-            plt.savefig("./images/threshold_est.pdf")
+            plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"threshold_est.pdf"))
             plt.show()
 
     return thres

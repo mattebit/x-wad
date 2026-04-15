@@ -67,12 +67,6 @@ Each experiment supports the following optional flags:
 - `--do-val`: Run evaluation on test set
 - `--do-test`: Generate predictions on test set
 - `--do-plot`: Generate visualization plots
-- `--no-preprocess`: Skip preprocessing (default)
-- `--no-split`: Skip dataset splitting (default)
-- `--no-train`: Skip training (default)
-- `--no-test`: Skip testing (default)
-- `--no-val`: Skip validation (default)
-- `--no-plot`: Skip plotting (default)
 
 **NOTE**: After the dataset is preprocessed and splitted the first time, it is not necessary to do it again. Just remove `--do-preprocess` `--do-split`, otherwise the dataset splits will change.
 

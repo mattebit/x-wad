@@ -11,6 +11,7 @@ import pandas as pd
 from tensorboard.backend.event_processing import event_accumulator
 
 from common.eval import Eval_entry
+from common.utils import IMAGES_FOLDER_PATH
 
 plt.style.use('bmh')
 
@@ -62,7 +63,7 @@ def plot_roc_curve(eval_file_path: str, title=""):
     plt.xlim(0, 1)  # Set x-axis
     plt.ylim(0, 1)
     ax.grid(True)
-    plt.savefig(f"images/roc_{''.join(title.split(' '))}.pdf")
+    plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"roc_{''.join(title.split(' '))}.pdf"))
     plt.show()
 
 
@@ -113,7 +114,7 @@ def plot_pr_curve(eval_file_path: str, title=""):
     plt.ylim(0, 1)
 
     ax.grid(True)
-    plt.savefig(f"images/pr_{''.join(title.split(' '))}.pdf")
+    plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"pr_{''.join(title.split(' '))}.pdf"))
     plt.show()
 
 
@@ -206,7 +207,7 @@ def plot_eval(
     if eval_files_labels is not None:
         plt.legend()
 
-    plt.savefig(f"images/{''.join(title.split(' '))}.pdf")
+    plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"{''.join(title.split(' '))}.pdf"))
     plt.show()
 
 
@@ -254,7 +255,7 @@ def plot_confusion_matrix(e: Eval_entry,
                  color="white" if cm[i, j] > thresh else "black")
 
     plt.tight_layout()
-    plt.savefig("confusion_" + title.strip() + ".pdf")
+    plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"confusion_{title.strip()}.pdf"))
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
     plt.show()
@@ -338,7 +339,7 @@ def plot_train_stats(model_folder: str, title: str):
         plt.grid(True)
 
     plt.tight_layout()  # Adjusts subplot params for a tight layout.
-    plt.savefig(f"images/{title}.pdf")
+    plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"{title}.pdf"))
     plt.show()
 
 
@@ -410,5 +411,5 @@ def plot_prediction_samples(
     plt.title(title)
     plt.ylabel(metric)
     plt.xlabel("sample_index")
-    plt.savefig(f"images/{title.strip()}.pdf")
+    plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"{title.strip()}.pdf"))
     plt.show()

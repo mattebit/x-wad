@@ -9,10 +9,6 @@ from common.predict import get_batch_predictions_masked_strided, get_batch_predi
 from common.train_from_scratch import train_model
 from common.utils import check_and_create_file, MODELS_FOLDER_PATH, mlm_default_collator_config_train
 
-# Force HF offline mode
-os.environ["HF_HUB_OFFLINE"] = "1"
-os.environ["HF_DATASETS_OFFLINE"] = "1"
-
 
 def execute(
         train_dataset_path: str,
@@ -209,7 +205,7 @@ def execute(
         if evaluate_params is None:
             # Use default evaluation parameters
             for i in range(1, 100, 1):
-                params.append((3000, 0.01 * i, "loss", True, False, False, 0.0, False, True, True))
+                params.append((3000, 0.01 * i, "loss", True, False, 0.0, True, True, False))
         else:
             params = evaluate_params
 
@@ -217,7 +213,7 @@ def execute(
             estimated_threshold = estimate_threshold_from_predictions(
                 validate_prediction_output_path, method=auto_threshold_est_method, k=.5, plot=True)
 
-            params.append((3000, estimated_threshold, "loss", True, False, False, 0.0, False, True, True, True))
+            params.append((3000, estimated_threshold, "loss", True, False, 0.0, True, True, True))
 
         evaluation_dir_path = os.path.join(OUTPUT_MODEL_PATH, "evaluations")
         Path(evaluation_dir_path).mkdir(parents=True, exist_ok=True)

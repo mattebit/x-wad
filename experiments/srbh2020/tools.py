@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 
@@ -8,6 +9,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from common.eval import get_best_result, get_fn_indexes, get_fp_indexes
+from common.utils import IMAGES_FOLDER_PATH
 
 
 def reconstruct_http_request(row) -> str | None:
@@ -200,8 +202,7 @@ def results_based_on_class_plot(
         stats["fn_rate"] = (stats["fn_count"] / stats["total"])
         stats["Model"] = label
 
-        if stats["fn_rate"] < 0.001:
-            continue
+        stats = stats[stats["fn_rate"] > 0.001]
 
         all_stats_list.append(stats)
 
@@ -256,8 +257,7 @@ def results_based_on_class_plot(
 
         plt.legend()
         plt.subplots_adjust(bottom=0.3)
-
-        plt.savefig("images/anomaly_results_comparison.pdf")
+        plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"anomaly_results_comparison.pdf"))
         plt.show()
 
 
@@ -281,6 +281,8 @@ def anomaly_per_class_plot(
     stats = df_filtered.groupby("ano_class").agg(
         total=("original_index", "count")
     ).reset_index()
+
+    stats = stats[stats["fn_rate"] > 0.001]
 
     # Sort by Total count descending
     stats = stats.sort_values("total", ascending=False)
@@ -321,7 +323,7 @@ def anomaly_per_class_plot(
         plt.legend()
         plt.subplots_adjust(bottom=0.35)
 
-        plt.savefig("images/anomaly_results.pdf")
+        plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"anomaly_results.pdf"))
         plt.show()
 
 

@@ -14,6 +14,11 @@ load_dotenv()
 DATASETS_FOLDER_PATH = os.environ.get("DATASETS_FOLDER_PATH", "./datasets")
 MODELS_FOLDER_PATH = os.environ.get("MODELS_FOLDER_PATH", "./models")
 ALLOW_OPTIMIZATIONS = os.environ.get("ALLOW_OPTIMIZATIONS", "False") == "true"
+IMAGES_FOLDER_PATH = os.environ.get("IMAGES_FOLDER_PATH", "./images")
+
+# Automatically create all folder paths if they don't exist
+for folder_path in [DATASETS_FOLDER_PATH, MODELS_FOLDER_PATH, IMAGES_FOLDER_PATH]:
+    os.makedirs(folder_path, exist_ok=True)
 
 try:
     MULTIPROCESSING_OVERRIDE_NUM_CORES = int(os.environ.get("MULTIPROCESSING_OVERRIDE_NUM_CORES", "0"))

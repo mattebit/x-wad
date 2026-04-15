@@ -1,8 +1,4 @@
 cp .env.example .env
-mkdir datasets
-mkdir datasets/srbh
-mkdir datasets/srbh/original
-mkdir models
 cd models
 git clone https://huggingface.co/answerdotai/ModernBERT-large
 git clone https://huggingface.co/HuggingFaceTB/SmolLM2-360M
