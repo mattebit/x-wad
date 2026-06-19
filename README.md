@@ -100,6 +100,7 @@ x-wad/
 │       ├── srbh_fix_smol_s.py      # Fixed SmolLM2-360M
 │       └── tools.py                # Common utilities for srbh
 ├── run_all.py                      # Script to run all experiments
+├── explain.py                      # The script used to explain the samples
 ├── requirements.txt                # Python dependencies
 └── README.md                       # This file
 ```

@@ -20,18 +20,18 @@ def run_experiment(
         do_val=False,
         do_plot=False,
         allow_optimizations=ALLOW_OPTIMIZATIONS):
-    TRUTH_DATASET_NAME = "capec-fix.requests"
+    TRUTH_DATASET_NAME = "srbhfix.requests"
     TRUTH_DATASET_PATH = os.path.join(THIS_DATASET_PATH, TRUTH_DATASET_NAME)
 
     if do_preprocess:
         # preprocess dataset
         preprocess(
             os.path.join(THIS_DATASET_PATH, "original", "data_capec_multilabel.csv"),
-            os.path.join(THIS_DATASET_PATH, "srbh-fix.requests"))
+            os.path.join(THIS_DATASET_PATH, "tmp.requests"))
 
         # generate fixed dataset
         fix_srbh(
-            os.path.join(THIS_DATASET_PATH, "srbh-fix.requests"),
+            os.path.join(THIS_DATASET_PATH, "tmp.requests"),
             TRUTH_DATASET_PATH)
 
     if do_split:

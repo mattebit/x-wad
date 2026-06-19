@@ -80,106 +80,118 @@ def prepare_explained_string(
         token_probabilities,
         tokens,
         print_output="terminal",
-        scaled_coloring=True,
-        exclude_special_tokens=True
+        gradient= True,
 ) -> str:
     """
     Function used to prepare the explained strings in the format specified with the "print_output" parameter.
     :param token_probabilities: The list of token probabilities
     :param tokens: The tokens list in string format
     :param print_output: The output format of the explained string (terminal, html, latex, latex_text)
-    :param scaled_coloring: False to use fixed thresholds, true to use percentile-based coloring
-    :param exclude_special_tokens: If True, exclude special tokens like EOS from the output
+    :param gradient: If set to true uses a gradient coloring, otherwise it uses the percentile-based coloring
     """
     log_string = ""
 
     if print_output == "html":
-        log_string = '<div style="background-color: #1e1e1e; color: white; padding: 20px; font-family: monospace; line-height: 1.5;">'
+        log_string = '<div style="background-color: #cccccc; color: white; padding: 20px; font-family: monospace; line-height: 1.5;">'
 
-    if scaled_coloring:
+    if not gradient:
         thresholds = np.percentile(token_probabilities, [2, 6, 14])
-    else:
-        thresholds = [.1, .2, .80]
+
+        color_mapped_thresholds = [
+            (thresholds[0], "FF0000"),  # Red
+            (thresholds[1], "FFA500"),  # Orange
+            (thresholds[2], "FFFF00"),  # Yellow
+        ]   
+
+    def get_terminal_color(hex_str, style="foreground"):
+            """
+            Converts a HEX string (e.g., 'FF0000' or '#FF0000') into a 24-bit ANSI escape code.
+            style: "background" to color the box behind text, "foreground" to color the text itself.
+            """
+            hex_str = hex_str.lstrip('#')
+            # Parse the HEX string into RGB integer values
+            r, g, b = tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
+            
+            if style == "background":
+                return f"\033[30m\033[48;2;{r};{g};{b}m"
+            else:
+                return f"\033[38;2;{r};{g};{b}m"
 
     for indx, token_id in enumerate(token_probabilities):
-        if tokens[indx] in ['<|endoftext|>', '[EOS]', '</s>', '<EOS>', '[PAD]', '<PAD>']:
+        if tokens[indx] in ['<|endoftext|>', '[EOS]', '</s>', '<EOS>', '[PAD]', '<PAD>', '[CLS]']:
             # Skip if special token
             # TODO: can be made more efficient
             continue
 
         actual_token_probability = float(token_id)
 
+        if gradient:
+            anomaly_hex_value = f"{round((1-actual_token_probability)*255):02x}"
+            normal_hex_value = f"{round((actual_token_probability)*255):02x}"
+        
         if print_output == "terminal":
-            if actual_token_probability < thresholds[0]:
-                log_string += "\033[91m" + f"{tokens[indx]}"
-            elif actual_token_probability < thresholds[1]:
-                log_string += "\033[93m" + f"{tokens[indx]}"
-            elif actual_token_probability < thresholds[2]:
-                log_string += "\033[0m" + f"{tokens[indx]}"
+            RESET = "\033[0m"
+
+            if gradient:
+                chosen_color = f"#ff{normal_hex_value}ff"
             else:
-                log_string += "\033[90m" + f"{tokens[indx]}"
+                chosen_color = None
+                for limit, hex_code in color_mapped_thresholds:
+                    if actual_token_probability < limit:
+                        chosen_color = hex_code
+                        break
+                        
+            if chosen_color:
+                color_code = get_terminal_color(chosen_color)
+                log_string += f"{color_code}{tokens[indx]}{RESET}"
 
         elif print_output == "html":
             token_text = tokens[indx].replace(" ", "&nbsp;")  # Preserve spaces in HTML
-
-            colors = {
-                "low": "#ff6b6b",  # Soft Red
-                "mid": "#feca57",  # Warm Yellow
-                "high": "#ffffff",  # White
-                "default": "#888888"  # Gray
-            }
-
-            if actual_token_probability < thresholds[0]:
-                color = colors["low"]
-            elif actual_token_probability < thresholds[1]:
-                color = colors["mid"]
-            elif actual_token_probability < thresholds[2]:
-                color = colors["high"]
+            if gradient:
+                color = f"#{anomaly_hex_value}00{normal_hex_value}"
+                log_string += f'<span style="color: {color};">{token_text}</span>'
             else:
-                color = colors["default"]
+                colors = {
+                    "low": "#ff6b6b",  # Soft Red
+                    "mid": "#ff8000",  # Warm Yellow
+                    "high": "#ffff00",  # White
+                    "default": "#000000"  # black
+                }
 
-            log_string += f'<span style="color: {color};">{token_text}</span>'
+                if actual_token_probability < thresholds[0]:
+                    color = colors["low"]
+                elif actual_token_probability < thresholds[1]:
+                    color = colors["mid"]
+                elif actual_token_probability < thresholds[2]:
+                    color = colors["high"]
+                else:
+                    color = colors["default"]
+
+                log_string += f'<span style="color: {color};">{token_text}</span>'
 
         elif print_output == "latex":
             act_token = tokens[indx]
-            if act_token == "_":
-                act_token = "\\_"
-            elif act_token == "$":
-                act_token = "\\$"
-            elif act_token == "%":
-                act_token = "\\%"
-            elif act_token == "&":
-                act_token = "\\&"
 
-            if actual_token_probability < thresholds[0]:
-                log_string += "|\\hl{red}{" + act_token + "}|"
-            elif actual_token_probability < thresholds[1]:
-                log_string += "|\\hl{orange}{" + act_token + "}|"
-            elif actual_token_probability < thresholds[2]:
-                log_string += "|\\hl{yellow}{" + act_token + "}|"
+            chars_to_escape = ["_", "$", "%", "&"]
+
+            for c in chars_to_escape:
+                if c in act_token:
+                    act_token = act_token.replace(c, f"\\{c}")
+
+            if gradient:
+                chosen_color=f"ff{normal_hex_value}ff"
+            else:
+                chosen_color = None
+                for limit, hex_code in color_mapped_thresholds:
+                    if actual_token_probability < limit:
+                        chosen_color = hex_code
+                        break
+
+            if chosen_color:
+                log_string += f"|\\hlhex{{{chosen_color}}}{{{act_token}}}|"
             else:
                 log_string += f"{act_token}"
-
-        elif print_output == "latex_text":
-            act_token = tokens[indx]
-            if act_token == "_":
-                act_token = "\\_"
-            elif act_token == "$":
-                act_token = "\\$"
-            elif act_token == "%":
-                act_token = "\\%"
-            elif act_token == "&":
-                act_token = "\\&"
-
-            if actual_token_probability < thresholds[0]:
-                log_string += "\\hl{red}{" + act_token + "}\\-"
-            elif actual_token_probability < thresholds[1]:
-                log_string += "\\hl{orange}{" + act_token + "}\\-"
-            elif actual_token_probability < thresholds[2]:
-                log_string += "\\hl{yellow}{" + act_token + "}\\-"
-            else:
-                log_string += f"{act_token}\\-"
-
+                
     if print_output == "terminal":
         log_string += "\033[0m"
     elif print_output == "html":
@@ -189,6 +201,7 @@ def prepare_explained_string(
     return log_string
 
 
+
 def explain_masked(
         in_string: str,
         model,
@@ -196,7 +209,8 @@ def explain_masked(
         print_output="terminal",
         batch_size=20,
         suppress_print=False,
-        tokenizer_args=tokenizer_base_args_predict
+        tokenizer_args=tokenizer_base_args_predict,
+        gradient=True
 ) -> tuple[str, float]:
     """
     Make a prediction and explain it visually by printing on terminal.
@@ -286,7 +300,7 @@ def explain_masked(
 
     avg_prob = np.array(token_probabilities).mean()
 
-    log_string = prepare_explained_string(token_probabilities, tokens, print_output)
+    log_string = prepare_explained_string(token_probabilities, tokens, print_output, gradient=gradient)
 
     if not suppress_print: print(log_string)
     return log_string, avg_prob
@@ -594,6 +608,7 @@ def explain_causal(
         tokenizer,
         print_output="terminal",
         suppress_print=False,
+        gradient=True,
         tokenizer_args=tokenizer_base_args_predict
 ) -> tuple[str, float]:
     """
@@ -605,6 +620,7 @@ def explain_causal(
     :param print_output: the output of the print "terminal" or "latex" format
     :param suppress_print: Set to true to avoid this function to print to terminal the explanation
     :param tokenizer_args: the tokenizer arguments to be used
+    :param gradient: Set to true to print an highlight which is based to a gradient, otherwise will be percentile
 
     :return a tuple containing the explained string and the loss value
     """
@@ -635,7 +651,7 @@ def explain_causal(
 
     token_probabilities = np.exp(-all_loss.to("cpu"))[0]
     avg_prob = np.array(token_probabilities).mean()
-    log_string = prepare_explained_string(token_probabilities, tokens, print_output)
+    log_string = prepare_explained_string(token_probabilities, tokens, print_output, gradient=gradient)
 
     if not suppress_print: print(log_string)
     return log_string, avg_prob

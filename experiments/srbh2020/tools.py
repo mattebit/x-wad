@@ -181,7 +181,7 @@ def results_based_on_class_plot(
     for i, f_path in enumerate(eval_files):
         label = labels[i]
 
-        e = get_best_result(f_path, "f1fn")
+        e = get_best_result(f_path, "estimated")
 
         fn_indexes = set(get_fn_indexes(e))
         fp_indexes = set(get_fp_indexes(e))

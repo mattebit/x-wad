@@ -15,6 +15,7 @@ class Eval_entry(Series):
     fn = 0
     tp = 0
     tn = 0
+    is_estimated = False
 
     def get_fp(self):
         return self.fp
@@ -34,6 +35,7 @@ class Eval_entry(Series):
         self.fn = self["false_negatives"]
         self.tp = self["true_positives"]
         self.tn = self["true_negatives"]
+        self.is_estimated = self["estimated"]
 
     def get_accuracy(self):
         return (self.tp + self.tn) / (self.tp + self.tn + self.fp + self.fn)
@@ -229,7 +231,8 @@ def evaluate(
         csv_truth: str,
         params: list,
         results_file_path: str,
-        log_all=True
+        log_all=True,
+        print_to_console=True
 ):
     """
     Evaluate the predictions from the given prediction file and save the results to a file
@@ -247,11 +250,16 @@ def evaluate(
 
     inputs = []
 
-    for i in params:
-        inputs.append((df,) + i)
+    if len(params) > 1:
+        # If there are more than one evaluation parallelize, otherwise avoid multiprocessing
+        for i in params:
+            inputs.append((df,) + i)
 
-    with multiprocessing.Pool(get_cpu_count()) as pool:
-        results = pool.starmap(evaluate_anomalies_parallel, inputs)
+        with multiprocessing.Pool(get_cpu_count()) as pool:
+            results = pool.starmap(evaluate_anomalies_parallel, inputs)
+    
+    else:
+        results = [evaluate_anomalies_parallel( *((df,) + params[0]))]
 
     df_out = pandas.DataFrame(results)
     df_out.columns = [
@@ -281,7 +289,11 @@ def evaluate(
         ])
 
     df_out.to_csv(results_file_path)
-    print_from_file(results_file_path)
+
+    if print_to_console:
+        print_from_file(results_file_path)
+
+    return df_out
 
 
 def get_best_result(
@@ -314,6 +326,9 @@ def get_best_result(
         acc = e.get_accuracy()
         fn = e.get_FNR()
         f1fn = f1 - fn
+
+        if by == "estimated" and e.is_estimated:
+            return e
 
         if by == "f1" and f1 > best_f1:
             best_f1 = f1
