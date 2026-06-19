@@ -21,9 +21,9 @@ def reconstruct_http_request(row) -> str | None:
     """
     # build first request row
     try:
-        method = row.get('request_http_method')
-        uri = row.get('request_http_request')
-        protocol = row.get('request_http_protocol')
+        method = row.get("request_http_method")
+        uri = row.get("request_http_request")
+        protocol = row.get("request_http_protocol")
     except KeyError:
         return None
 
@@ -35,17 +35,17 @@ def reconstruct_http_request(row) -> str | None:
     # build headers
     headers = []
     header_mapping = {
-        'request_host': 'Host',
-        'request_user_agent': 'User-Agent',
-        'request_accept': 'Accept',
-        'request_accept_language': 'Accept-Language',
-        'request_accept_encoding': 'Accept-Encoding',
-        'request_referer': 'Referer',
-        'request_origin': 'Origin',
-        'request_cookie': 'Cookie',
-        'request_content_type': 'Content-Type',
-        'request_do_not_track': 'DNT',
-        'request_connection': 'Connection',
+        "request_host": "Host",
+        "request_user_agent": "User-Agent",
+        "request_accept": "Accept",
+        "request_accept_language": "Accept-Language",
+        "request_accept_encoding": "Accept-Encoding",
+        "request_referer": "Referer",
+        "request_origin": "Origin",
+        "request_cookie": "Cookie",
+        "request_content_type": "Content-Type",
+        "request_do_not_track": "DNT",
+        "request_connection": "Connection",
     }
 
     for col_name, header_name in header_mapping.items():
@@ -55,19 +55,19 @@ def reconstruct_http_request(row) -> str | None:
 
     # Append request body
     try:
-        body = row.get('request_body')
+        body = row.get("request_body")
     except KeyError:
         return None
 
     # if body is NaN set empty string
     if pd.isna(body):
-        body = ''
+        body = ""
 
     # Assemble request
     full_request_parts = [request_line] + headers
 
     # Add a blank line between headers and body, as per HTTP specification
-    full_request_parts.append('')
+    full_request_parts.append("")
 
     # Add the body if it exists
     if body:
@@ -89,7 +89,7 @@ ALL_ANO_CLASS = [
     "274 - HTTP Verb Tampering",
     "194 - Fake the Source of Data",
     "34 - HTTP Response Splitting",
-    "33 - HTTP Request Smuggling"
+    "33 - HTTP Request Smuggling",
 ]
 
 
@@ -113,7 +113,9 @@ def preprocess(input_file, output_file) -> None:
         sys.exit(1)
 
     reconstructed_requests = []
-    for index, (_, row) in tqdm(enumerate(df.iterrows()), total=(len(df)), desc="processing.."):
+    for index, (_, row) in tqdm(
+        enumerate(df.iterrows()), total=(len(df)), desc="processing.."
+    ):
         request_str = reconstruct_http_request(row)
 
         if request_str is None:
@@ -129,18 +131,24 @@ def preprocess(input_file, output_file) -> None:
                     break
 
         if request_str:
-            reconstructed_requests.append({
-                "original_index": index + 1,  # start counting by 1
-                "anomalous": 1 if row["000 - Normal"] == 0 else 0,  # invert anomalous flag logic
-                "ano_class": ano_class,
-                "request": request_str
-            })
+            reconstructed_requests.append(
+                {
+                    "original_index": index + 1,  # start counting by 1
+                    "anomalous": 1
+                    if row["000 - Normal"] == 0
+                    else 0,  # invert anomalous flag logic
+                    "ano_class": ano_class,
+                    "request": request_str,
+                }
+            )
 
     if not reconstructed_requests:
         print("[WARNING] No valid HTTP requests could be reconstructed.")
         return
 
-    print(f"[*] Saving {len(reconstructed_requests)} reconstructed requests to '{output_file}'...")
+    print(
+        f"[*] Saving {len(reconstructed_requests)} reconstructed requests to '{output_file}'..."
+    )
 
     try:
         df_out = pandas.DataFrame(reconstructed_requests)
@@ -153,11 +161,7 @@ def preprocess(input_file, output_file) -> None:
 
 
 def results_based_on_class_plot(
-        eval_files,
-        truth_file,
-        plot=False,
-        title="",
-        labels=["false negatives"]
+    eval_files, truth_file, plot=False, title="", labels=["false negatives"]
 ):
     """
     Plots the False Negatives results based on anomaly class of a specific evaluation file or files. THe truth file
@@ -171,9 +175,8 @@ def results_based_on_class_plot(
 
     # Filter out 'normal' and NaN classes
     df_truth_filtered = df_truth[
-        (df_truth["ano_class"] != "normal") &
-        (df_truth["ano_class"].notna())
-        ].copy()
+        (df_truth["ano_class"] != "normal") & (df_truth["ano_class"].notna())
+    ].copy()
 
     all_stats_list = []
 
@@ -192,14 +195,18 @@ def results_based_on_class_plot(
         current_df["is_fp"] = current_df["original_index"].isin(fp_indexes)
 
         # Group by class and calculate counts
-        stats = current_df.groupby("ano_class").agg(
-            total=("original_index", "count"),
-            fn_count=("is_fn", "sum"),
-            fp_count=("is_fp", "sum")
-        ).reset_index()
+        stats = (
+            current_df.groupby("ano_class")
+            .agg(
+                total=("original_index", "count"),
+                fn_count=("is_fn", "sum"),
+                fp_count=("is_fp", "sum"),
+            )
+            .reset_index()
+        )
 
         # Calculate percentages
-        stats["fn_rate"] = (stats["fn_count"] / stats["total"])
+        stats["fn_rate"] = stats["fn_count"] / stats["total"]
         stats["Model"] = label
 
         stats = stats[stats["fn_rate"] > 0.001]
@@ -210,11 +217,17 @@ def results_based_on_class_plot(
     final_df = pd.concat(all_stats_list, ignore_index=True)
 
     # Sort
-    final_df = final_df.sort_values(["fn_rate"], ascending=False)  # ["ano_class", "Model"])
+    final_df = final_df.sort_values(
+        ["fn_rate"], ascending=False
+    )  # ["ano_class", "Model"])
 
     # Print console
     print(f"\n--- Analysis for {len(eval_files)} files ---")
-    print(final_df[["Model", "ano_class", "total", "fn_count", "fn_rate"]].to_string(index=False))
+    print(
+        final_df[["Model", "ano_class", "total", "fn_count", "fn_rate"]].to_string(
+            index=False
+        )
+    )
     # final_df.to_csv("original_fix_fnr_comparison.csv")
 
     if plot:
@@ -227,10 +240,12 @@ def results_based_on_class_plot(
             y="fn_rate",
             hue="Model",  # it groups bars by the 'Model' column
             palette="viridis",
-            edgecolor="black"
+            edgecolor="black",
         )
 
-        plt.title(title if title else "False Negative Rate per Class Comparison", fontsize=15)
+        plt.title(
+            title if title else "False Negative Rate per Class Comparison", fontsize=15
+        )
         plt.xlabel("Anomaly Class", fontsize=12)
         plt.ylabel("Per-class FN (%)", fontsize=12)
         plt.xticks(rotation=30, ha="right")
@@ -252,7 +267,7 @@ def results_based_on_class_plot(
                         va="bottom",
                         fontsize=8,
                         color="black",
-                        rotation=0
+                        rotation=0,
                     )
 
         plt.legend()
@@ -261,11 +276,7 @@ def results_based_on_class_plot(
         plt.show()
 
 
-def anomaly_per_class_plot(
-        truth_file,
-        plot=False,
-        title=""
-):
+def anomaly_per_class_plot(truth_file, plot=False, title=""):
     """
     Plot the number of anomalies for each class in a bar plot.
     """
@@ -273,14 +284,15 @@ def anomaly_per_class_plot(
 
     # Filter out 'normal' and NaN classes
     df_filtered = df_truth[
-        (df_truth["ano_class"] != "normal") &
-        (df_truth["ano_class"].notna())
-        ].copy()
+        (df_truth["ano_class"] != "normal") & (df_truth["ano_class"].notna())
+    ].copy()
 
     # Group by class and calculate counts
-    stats = df_filtered.groupby("ano_class").agg(
-        total=("original_index", "count")
-    ).reset_index()
+    stats = (
+        df_filtered.groupby("ano_class")
+        .agg(total=("original_index", "count"))
+        .reset_index()
+    )
 
     stats = stats[stats["fn_rate"] > 0.001]
 
@@ -297,7 +309,7 @@ def anomaly_per_class_plot(
             y="total",
             color="lightgray",
             label="Anomalies",
-            edgecolor="black"
+            edgecolor="black",
         )
 
         plt.title(title, fontsize=15)
@@ -315,9 +327,9 @@ def anomaly_per_class_plot(
                     x=i,
                     y=bar_height + (bar_height * 0.02),
                     s=label,
-                    color='black',
+                    color="black",
                     ha="center",
-                    fontsize=9
+                    fontsize=9,
                 )
 
         plt.legend()
@@ -327,7 +339,9 @@ def anomaly_per_class_plot(
         plt.show()
 
 
-def fix_srbh(original_path, output_fix, output_mislabeled="mislabeled_indexes.csv") -> None:
+def fix_srbh(
+    original_path, output_fix, output_mislabeled="mislabeled_indexes.csv"
+) -> None:
     """
     Takes the processed original SRBH dataset, and relabels samples that contains unusual patterns.
     :param original_path: The source original SRBH dataset (already processed)
@@ -342,25 +356,24 @@ def fix_srbh(original_path, output_fix, output_mislabeled="mislabeled_indexes.cs
         "User-Agent: ( ",
         "User-Agent: ) ",
         "User-Agent: + ",
-        "User-Agent: '\"\" ",
+        'User-Agent: \'"" ',
         "User-Agent: ' ",
-        "User-Agent: \"\" ",
+        'User-Agent: "" ',
         "User-Agent: any ",
         "User-Agent: any? ",
-        "Referer: \"\"\'",
+        'Referer: ""\'',
         "Referer: <!-- ",
         "Referer: ]]> ",
-        "Firefox/70.0\"\" ",
-        "Firefox/70.0\' ",
-        "Firefox/70.0\'\"\" ",
+        'Firefox/70.0"" ',
+        "Firefox/70.0' ",
+        'Firefox/70.0\'"" ',
         "Firefox/70.0( ",
         "Firefox/70.0) ",
         "Firefox/70.0; ",
         "Firefox/70.0NULL ",
         ".chr(",
         "--",
-        "<!--#EXEC"
-        "c%3A%5C",
+        "<!--#EXECc%3A%5C",
         "c%3A%2F",
         "..\\",
         "../",
@@ -368,8 +381,7 @@ def fix_srbh(original_path, output_fix, output_mislabeled="mislabeled_indexes.cs
         "/.git",
         "Set-cookie%3A+Tamper",
         "%3C%21",
-        "boot.ini,"
-        "XYZABCDEFGHIJ",
+        "boot.ini,XYZABCDEFGHIJ",
         "%5D%5D%3E",
         "${",
         "//",
@@ -407,8 +419,7 @@ def fix_srbh(original_path, output_fix, output_mislabeled="mislabeled_indexes.cs
         "/blog+%2F",
         "/blog/%00",
         "/blog/%22",
-        "/blog%22"
-        "/blog/%27",
+        "/blog%22/blog/%27",
         "/blog/%28",
         "/blog/%2B",
         "/blog/%2F",
@@ -417,8 +428,7 @@ def fix_srbh(original_path, output_fix, output_mislabeled="mislabeled_indexes.cs
         "/blog/%5C",
         "/blog/%7C",
         "/blog/index.php%22",
-        "/blog/index.php/%24"
-        "/blog/index.php%25",
+        "/blog/index.php/%24/blog/index.php%25",
         "/blog/index.php%26",
         "/blog/index.php%27",
         "/blog/index.php%3B",
@@ -454,11 +464,10 @@ def fix_srbh(original_path, output_fix, output_mislabeled="mislabeled_indexes.cs
         "/blog/index.php/2020/03/27/%",
         "/blog/index.php/2020/03/22+%2F",
         "/blog/index.php/2020/03/22%",
-        "/blog/index.php/2020/03/27/qui-ratione-maxime-dolores-consequatur/%,"
-        "%00",
+        "/blog/index.php/2020/03/27/qui-ratione-maxime-dolores-consequatur/%,%00",
         "/blog/index.php/2020/04/%",
         "/blog/index.php/2020/04/%",
-        "/blog/index.php/2020/04/04%"
+        "/blog/index.php/2020/04/04%",
     ]
 
     re_patterns = [
@@ -496,5 +505,7 @@ def fix_srbh(original_path, output_fix, output_mislabeled="mislabeled_indexes.cs
     df_misslabeled = df_misslabeled["original_index"]
     df_misslabeled.to_csv(output_mislabeled)
 
-    print(f"Tot wrong: {len(wrong_fp_indexes)} over {len(df)} FP: {len(wrong_fp_indexes) / len(df)}")
+    print(
+        f"Tot wrong: {len(wrong_fp_indexes)} over {len(df)} FP: {len(wrong_fp_indexes) / len(df)}"
+    )
     df_fix.to_csv(output_fix)

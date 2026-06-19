@@ -105,7 +105,7 @@ def load_model_and_tokenizer(model_to_use: dict):
 
 
 if __name__ == "__main__":
-    model_to_use = model_modernbert_large_srbh_fix # Select which model to use
+    model_to_use = model_modernbert_large_srbh_fix  # Select which model to use
     model, tokenizer = load_model_and_tokenizer(model_to_use)
 
     if True:

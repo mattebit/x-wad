@@ -5,27 +5,36 @@ from datasets import load_dataset
 from transformers import (
     DataCollatorForLanguageModeling,
     Trainer,
-    TrainingArguments, AutoTokenizer, EarlyStoppingCallback, AutoConfig, AutoModelForMaskedLM,
-    AutoModelForCausalLM
+    TrainingArguments,
+    AutoTokenizer,
+    EarlyStoppingCallback,
+    AutoConfig,
+    AutoModelForMaskedLM,
+    AutoModelForCausalLM,
 )
 from transformers.trainer_utils import get_last_checkpoint
 
-from common.utils import trainer_base_args, tokenizer_base_args, get_cpu_count, model_load_settings_normal
+from common.utils import (
+    trainer_base_args,
+    tokenizer_base_args,
+    get_cpu_count,
+    model_load_settings_normal,
+)
 
 
 def train_model(
-        train_dataset_path: str,
-        model_output_dir: str,
-        training_args: dict,
-        model_config_override_args: dict = {},
-        tokenizer_override_config_args: dict = {},
-        tokenizer_args: dict = tokenizer_base_args,
-        auto_resume_from_checkpoint=True,
-        val_dataset_path=None,
-        custom_fixed_tokenizer_tokens=[],
-        model_name="ModernBERT-large",
-        model_is_mlm=True,
-        model_load_settings=model_load_settings_normal
+    train_dataset_path: str,
+    model_output_dir: str,
+    training_args: dict,
+    model_config_override_args: dict = {},
+    tokenizer_override_config_args: dict = {},
+    tokenizer_args: dict = tokenizer_base_args,
+    auto_resume_from_checkpoint=True,
+    val_dataset_path=None,
+    custom_fixed_tokenizer_tokens=[],
+    model_name="ModernBERT-large",
+    model_is_mlm=True,
+    model_load_settings=model_load_settings_normal,
 ):
     """
     Trains a model from scratch starting from its initial configuration
@@ -58,14 +67,13 @@ def train_model(
 
         def get_training_corpus(dataset, batch_size=1000):
             for i in range(0, len(dataset), batch_size):
-                yield dataset[i: i + batch_size]["request"]
+                yield dataset[i : i + batch_size]["request"]
 
         if "vocab_size" not in tokenizer_override_config_args:
             tokenizer_override_config_args["vocab_size"] = config.vocab_size
 
         tokenizer = original_tokenizer.train_new_from_iterator(
-            get_training_corpus(dataset),
-            **tokenizer_override_config_args
+            get_training_corpus(dataset), **tokenizer_override_config_args
         )
 
         tokenizer.add_tokens(custom_fixed_tokenizer_tokens)
@@ -93,9 +101,13 @@ def train_model(
         tokenizer = AutoTokenizer.from_pretrained(model_output_dir)
 
     if model_is_mlm:
-        model = AutoModelForMaskedLM.from_pretrained(model_output_dir, **model_load_settings)
+        model = AutoModelForMaskedLM.from_pretrained(
+            model_output_dir, **model_load_settings
+        )
     else:
-        model = AutoModelForCausalLM.from_pretrained(model_output_dir, **model_load_settings)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_output_dir, **model_load_settings
+        )
 
     print(f"Tokenizer size {len(tokenizer)}")
     print(f"Model tokenizer size {model.config.vocab_size}")
@@ -109,7 +121,7 @@ def train_model(
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=tokenizer,
             mlm=True,
-            mlm_probability=training_args["mlm_probability"]
+            mlm_probability=training_args["mlm_probability"],
         )
         training_args.pop("mlm_probability")
 
@@ -121,21 +133,15 @@ def train_model(
     if val_dataset_path is not None:
         data_files["evaluation"] = val_dataset_path
 
-    full_dataset = load_dataset(
-        'csv',
-        data_files=data_files
-    )
+    full_dataset = load_dataset("csv", data_files=data_files)
     dataset = full_dataset.select_columns("request")
 
     def tokenize_function(examples):
-        return tokenizer(
-            examples["request"],
-            **tokenizer_args
-        )
+        return tokenizer(examples["request"], **tokenizer_args)
 
     # Check that the dataset contains all valid strings (str type and not empty)
     def is_valid_string(example):
-        return isinstance(example['request'], str) and example['request'].strip() != ""
+        return isinstance(example["request"], str) and example["request"].strip() != ""
 
     # Apply the filter to remove invalid data
     dataset = dataset.filter(is_valid_string)
@@ -157,7 +163,9 @@ def train_model(
             checkpoint = last_checkpoint
 
     if "torch_compile" in trainer_base_args.keys():
-        torch._dynamo.config.recompile_limit = 1e4  # Remove recompilation limits for multiple consecutive runs
+        torch._dynamo.config.recompile_limit = (
+            1e4  # Remove recompilation limits for multiple consecutive runs
+        )
 
     args = trainer_base_args | training_args
 

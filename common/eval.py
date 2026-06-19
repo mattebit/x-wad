@@ -87,8 +87,8 @@ class Eval_entry(Series):
             f"TPR:{self.get_TPR():.2%} "
             f"FNR:{self.get_FNR():.2%} "
             f"TNR:{self.get_TNR():.2%} "
-            f"Dev_mult:{self["std_multiplier"]} "
-            f"Window:{self["window_size"]}"
+            f"Dev_mult:{self['std_multiplier']} "
+            f"Window:{self['window_size']}"
         )
 
 
@@ -119,23 +119,23 @@ def upside_deviation(data: list[int | float], target=None):
     upside_deviations = np.maximum(0, deviations)
 
     # 3. Square the upside deviations, sum them, and divide by n-1
-    upside_variance = np.sum(upside_deviations ** 2) / (len(data) - 1)
+    upside_variance = np.sum(upside_deviations**2) / (len(data) - 1)
 
     # 4. The upside deviation is the square root of the upside variance
     return np.sqrt(upside_variance)
 
 
 def evaluate_anomalies_parallel(
-        df_prediction: pandas.DataFrame,
-        window_size: int,
-        threshold_offset: float,
-        metric_str: str = "loss",
-        average_anomalies: bool = False,
-        use_std_as_offset: bool = False,
-        std_multiplier: float = 1,
-        log_fp_indexes: bool = False,
-        log_fn_indexes: bool = False,
-        estimated: bool = False,
+    df_prediction: pandas.DataFrame,
+    window_size: int,
+    threshold_offset: float,
+    metric_str: str = "loss",
+    average_anomalies: bool = False,
+    use_std_as_offset: bool = False,
+    std_multiplier: float = 1,
+    log_fp_indexes: bool = False,
+    log_fn_indexes: bool = False,
+    estimated: bool = False,
 ):
     """
     Evaluate the given prediction file against the truth dataset.
@@ -144,7 +144,7 @@ def evaluate_anomalies_parallel(
     :param window_size: The window size to use
     :param threshold_offset: The threshold above the average to consider a sample anomalous
     :param metric_str: The metric to use "std_dev", "perplexity" or "loss"
-    :param average_anomalies: If set to true, anomalies are used to compute average 
+    :param average_anomalies: If set to true, anomalies are used to compute average
     :param use_std_as_offset: If set to true, calculate std deviation of samples and use it as sum of threshold
     :param std_multiplier: Multiply the STD or the UPD with this multiplier
     :param use_average: if to use average of samples during calculation
@@ -172,22 +172,20 @@ def evaluate_anomalies_parallel(
 
         rolling_std = df_prediction[metric_str].rolling(window=window_size).std()
         rolling_std = rolling_std.fillna(
-            average_std)  # Replace NaNs with average STD. In real world this will be done with prior data
+            average_std
+        )  # Replace NaNs with average STD. In real world this will be done with prior data
         df_prediction["rolling_std"] = rolling_std
 
     for index, prediction in df_prediction.iterrows():
         metric_value = prediction[metric_str]
         is_normal = prediction["anomalous"] == 0
 
-        calculated_threshold = (
-                threshold_offset +
-                ((prediction["rolling_std"] if use_std_as_offset else 0) * std_multiplier)
+        calculated_threshold = threshold_offset + (
+            (prediction["rolling_std"] if use_std_as_offset else 0) * std_multiplier
         )
         calculated_thresholds.append(calculated_threshold)
 
-        classified_anomaly = (
-                metric_value > calculated_threshold
-        )
+        classified_anomaly = metric_value > calculated_threshold
 
         if classified_anomaly and is_normal:
             if log_fp_indexes:
@@ -222,17 +220,17 @@ def evaluate_anomalies_parallel(
         correct,
         fp_indexes,
         fn_indexes,
-        estimated
+        estimated,
     )
 
 
 def evaluate(
-        prediction_csv_path: str,
-        csv_truth: str,
-        params: list,
-        results_file_path: str,
-        log_all=True,
-        print_to_console=True
+    prediction_csv_path: str,
+    csv_truth: str,
+    params: list,
+    results_file_path: str,
+    log_all=True,
+    print_to_console=True,
 ):
     """
     Evaluate the predictions from the given prediction file and save the results to a file
@@ -257,13 +255,13 @@ def evaluate(
 
         with multiprocessing.Pool(get_cpu_count()) as pool:
             results = pool.starmap(evaluate_anomalies_parallel, inputs)
-    
+
     else:
-        results = [evaluate_anomalies_parallel( *((df,) + params[0]))]
+        results = [evaluate_anomalies_parallel(*((df,) + params[0]))]
 
     df_out = pandas.DataFrame(results)
     df_out.columns = [
-        'window_size',
+        "window_size",
         "threshold_offset",
         "metric",
         "average_anomalies",
@@ -277,16 +275,18 @@ def evaluate(
         "correct",
         "fp_indexes",
         "fn_indexes",
-        "estimated"
+        "estimated",
     ]
 
     if not log_all:
-        df_out = df_out.drop(columns=[
-            "fp_indexes",
-            "fn_indexes",
-            "average_anomalies",
-            "use_std_as_offset",
-        ])
+        df_out = df_out.drop(
+            columns=[
+                "fp_indexes",
+                "fn_indexes",
+                "average_anomalies",
+                "use_std_as_offset",
+            ]
+        )
 
     df_out.to_csv(results_file_path)
 
@@ -296,10 +296,7 @@ def evaluate(
     return df_out
 
 
-def get_best_result(
-        eval_file_path: str,
-        by: str = "f1"
-) -> Eval_entry:
+def get_best_result(eval_file_path: str, by: str = "f1") -> Eval_entry:
     """
     Return the best result by the selected metric
     :param eval_file_path: the path of the evaluation file to get the best result from
@@ -426,7 +423,7 @@ def get_AUC_ROC_from_predictions(prediction_file_path: str, truth_file_path: str
     Get the AUC_ROC and AUC_PR scores from the predictions and the dataset truth file
     :param prediction_file_path:
     :param truth_file_path:
-    :return: 
+    :return:
     """
     df_pred = pandas.read_csv(prediction_file_path)
     df_truth = pandas.read_csv(truth_file_path)

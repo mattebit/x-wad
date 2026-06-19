@@ -21,7 +21,9 @@ for folder_path in [DATASETS_FOLDER_PATH, MODELS_FOLDER_PATH, IMAGES_FOLDER_PATH
     os.makedirs(folder_path, exist_ok=True)
 
 try:
-    MULTIPROCESSING_OVERRIDE_NUM_CORES = int(os.environ.get("MULTIPROCESSING_OVERRIDE_NUM_CORES", "0"))
+    MULTIPROCESSING_OVERRIDE_NUM_CORES = int(
+        os.environ.get("MULTIPROCESSING_OVERRIDE_NUM_CORES", "0")
+    )
 except Exception:
     MULTIPROCESSING_OVERRIDE_NUM_CORES = 0
 
@@ -32,7 +34,7 @@ trainer_base_args = {
     "bf16": True,  # Improves performance, better than fp16, works with RTX3090
     "logging_steps": 1,
     "dataloader_num_workers": os.cpu_count(),  # Use all available CPU cores to
-    "gradient_checkpointing": True  # to save VRAM
+    "gradient_checkpointing": True,  # to save VRAM
 }
 
 tokenizer_base_args = {
@@ -47,24 +49,24 @@ tokenizer_base_args_predict = tokenizer_base_args
 tokenizer_base_args_predict.pop("return_overflowing_tokens")
 
 mlm_default_collator_config_train = {
-    "mlm_probability": .30,
+    "mlm_probability": 0.30,
     "mask_replace_prob": 1.0,
-    "random_replace_prob": 0.0
+    "random_replace_prob": 0.0,
 }
 
 mlm_default_collator_config_predict = {
-    "mlm_probability": .40,
+    "mlm_probability": 0.40,
     "mask_replace_prob": 1.0,
-    "random_replace_prob": 0.0
+    "random_replace_prob": 0.0,
 }
 
 default_split_perc = {
-    "train_frac_normals": .7,
+    "train_frac_normals": 0.7,
     "train_frac_anomalous": 0,
-    "eval_frac_normals": .1,
+    "eval_frac_normals": 0.1,
     "eval_frac_anomalous": 0,
-    "test_frac_normals": .2,
-    "test_frac_anomalous": 1
+    "test_frac_normals": 0.2,
+    "test_frac_anomalous": 1,
 }
 
 model_load_settings_normal = {
@@ -90,55 +92,68 @@ def get_cpu_count():
         return os.cpu_count() - 1 if os.cpu_count() > 1 else os.cpu_count()
 
 
-def get_dataset_split_paths_names(TRUTH_DATSET_PATH:str, dataset_prefix:str):
+def get_dataset_split_paths_names(TRUTH_DATSET_PATH: str, dataset_prefix: str):
     THIS_DATASET_PATH, TRUTH_DATASET_NAME = os.path.split(TRUTH_DATSET_PATH)
-    TRAIN_DATASET_PATH = os.path.join(THIS_DATASET_PATH, f"{dataset_prefix}-train-{TRUTH_DATASET_NAME}")
+    TRAIN_DATASET_PATH = os.path.join(
+        THIS_DATASET_PATH, f"{dataset_prefix}-train-{TRUTH_DATASET_NAME}"
+    )
     TRAIN_DATASET_NAME = os.path.splitext(os.path.basename(TRAIN_DATASET_PATH))[0]
-    VALIDATION_DATASET_PATH = os.path.join(THIS_DATASET_PATH, f"{dataset_prefix}-eval-{TRUTH_DATASET_NAME}")
-    VALIDATION_DATASET_NAME = os.path.splitext(os.path.basename(VALIDATION_DATASET_PATH))[0]
-    TEST_DATASET_PATH = os.path.join(THIS_DATASET_PATH, f"{dataset_prefix}-test-{TRUTH_DATASET_NAME}")
+    VALIDATION_DATASET_PATH = os.path.join(
+        THIS_DATASET_PATH, f"{dataset_prefix}-eval-{TRUTH_DATASET_NAME}"
+    )
+    VALIDATION_DATASET_NAME = os.path.splitext(
+        os.path.basename(VALIDATION_DATASET_PATH)
+    )[0]
+    TEST_DATASET_PATH = os.path.join(
+        THIS_DATASET_PATH, f"{dataset_prefix}-test-{TRUTH_DATASET_NAME}"
+    )
     TEST_DATASET_NAME = os.path.splitext(os.path.basename(TEST_DATASET_PATH))[0]
-    return (TRAIN_DATASET_PATH,
-            TRAIN_DATASET_NAME,
-            VALIDATION_DATASET_PATH,
-            VALIDATION_DATASET_NAME,
-            TEST_DATASET_PATH,
-            TEST_DATASET_NAME)
+    return (
+        TRAIN_DATASET_PATH,
+        TRAIN_DATASET_NAME,
+        VALIDATION_DATASET_PATH,
+        VALIDATION_DATASET_NAME,
+        TEST_DATASET_PATH,
+        TEST_DATASET_NAME,
+    )
 
 
 def get_model_related_paths(model_folder_path, model_name, test_dataset_name):
     OUTPUT_MODEL_PATH = os.path.join(model_folder_path, model_name)
     EVALUATIONS_FOLDER_PATH = os.path.join(OUTPUT_MODEL_PATH, "evaluations/")
     PREDICTIONS_FOLDER_PATH = os.path.join(OUTPUT_MODEL_PATH, "predictions/")
-    PREDICT_FILE_PATH = os.path.join(PREDICTIONS_FOLDER_PATH, f"pred_{test_dataset_name}.csv")
-    EVAL_FILE_PATH = os.path.join(EVALUATIONS_FOLDER_PATH, f"eval_{test_dataset_name}.csv")
+    PREDICT_FILE_PATH = os.path.join(
+        PREDICTIONS_FOLDER_PATH, f"pred_{test_dataset_name}.csv"
+    )
+    EVAL_FILE_PATH = os.path.join(
+        EVALUATIONS_FOLDER_PATH, f"eval_{test_dataset_name}.csv"
+    )
 
     return (
         EVALUATIONS_FOLDER_PATH,
         PREDICTIONS_FOLDER_PATH,
         PREDICT_FILE_PATH,
-        EVAL_FILE_PATH
+        EVAL_FILE_PATH,
     )
 
 
 def get_argument_parser_experiments():
     parser = argparse.ArgumentParser(
-        description="",
-        formatter_class=argparse.RawTextHelpFormatter
+        description="", formatter_class=argparse.RawTextHelpFormatter
     )
 
     # required Argument
     parser.add_argument(
         "THIS_DATASET_PATH",
         type=str,
-        help="The file path to the initial raw dataset (e.g., 'data/raw/dataset.csv')."
+        help="The file path to the initial raw dataset (e.g., 'data/raw/dataset.csv').",
     )
 
     parser.add_argument(
         "--models-folder-path",
         type=str,
         default="models",
-        help="Directory where trained models will be saved.\n(Default: models)"
+        help="Directory where trained models will be saved.\n(Default: models)",
     )
     # store_true means if the flag is present, the value is True.
 
@@ -146,79 +161,79 @@ def get_argument_parser_experiments():
         "--do-preprocess",
         action="store_true",
         default=False,
-        help="Set this flag to enable the data preprocessing stage.\n(Default: False)"
+        help="Set this flag to enable the data preprocessing stage.\n(Default: False)",
     )
     parser.add_argument(
         "--no-preprocess",
         dest="do_preprocess",
         action="store_false",
-        help="Explicitly disable the data preprocessing stage."
+        help="Explicitly disable the data preprocessing stage.",
     )
 
     parser.add_argument(
         "--do-split",
         action="store_true",
         default=False,
-        help="Set this flag to enable the data splitting stage.\n(Default: False)"
+        help="Set this flag to enable the data splitting stage.\n(Default: False)",
     )
     parser.add_argument(
         "--no-split",
         dest="do_split",
         action="store_false",
-        help="Explicitly disable the data splitting stage."
+        help="Explicitly disable the data splitting stage.",
     )
 
     parser.add_argument(
         "--do-train",
         action="store_true",
         default=True,
-        help="Set this flag to enable the model training stage (Default behavior).\n(Default: True)"
+        help="Set this flag to enable the model training stage (Default behavior).\n(Default: True)",
     )
     # Using --no-train to explicitly override the default=True behavior
     parser.add_argument(
         "--no-train",
         dest="do_train",
         action="store_false",
-        help="Explicitly disable the model training stage."
+        help="Explicitly disable the model training stage.",
     )
 
     parser.add_argument(
         "--do-test",
         action="store_true",
         default=True,
-        help="Set this flag to enable the model test stage (Default behavior).\n(Default: True)"
+        help="Set this flag to enable the model test stage (Default behavior).\n(Default: True)",
     )
     parser.add_argument(
         "--no-test",
         dest="do_test",
         action="store_false",
-        help="Explicitly disable the model test stage."
+        help="Explicitly disable the model test stage.",
     )
 
     parser.add_argument(
         "--do-val",
         action="store_true",
         default=True,
-        help="Set this flag to enable the model validation stage (Default behavior).\n(Default: True)"
+        help="Set this flag to enable the model validation stage (Default behavior).\n(Default: True)",
     )
     parser.add_argument(
         "--no-val",
         dest="do_val",
         action="store_false",
-        help="Explicitly disable the model validation stage."
+        help="Explicitly disable the model validation stage.",
     )
 
     parser.add_argument(
         "--do-plot",
         action="store_true",
         default=False,
-        help="Set this flag to enable the performance plotting stage.\n(Default: False)"
+        help="Set this flag to enable the performance plotting stage.\n(Default: False)",
     )
     parser.add_argument(
         "--no-plot",
         dest="do_plot",
         action="store_false",
-        help="Explicitly disable the performance plotting stage."
+        help="Explicitly disable the performance plotting stage.",
     )
     return parser
 
@@ -249,7 +264,7 @@ def check_and_create_file(file_path: str, create_if_missing: bool = False) -> bo
             if directory:
                 os.makedirs(directory, exist_ok=True)
 
-            with open(file_path, 'w') as f:
+            with open(file_path, "w") as f:
                 pass  # The file is created but remains empty.
 
             return True
@@ -259,16 +274,16 @@ def check_and_create_file(file_path: str, create_if_missing: bool = False) -> bo
 
 
 def split_dataset(
-        dataset_path: str,
-        train_frac_normals: float,
-        train_frac_anomalous: float,
-        eval_frac_normals: float,
-        eval_frac_anomalous: float,
-        test_frac_normals: float,
-        test_frac_anomalous: float,
-        dataset_folder_path=None,
-        prefix_str="",
-        dry_run=False
+    dataset_path: str,
+    train_frac_normals: float,
+    train_frac_anomalous: float,
+    eval_frac_normals: float,
+    eval_frac_anomalous: float,
+    test_frac_normals: float,
+    test_frac_anomalous: float,
+    dataset_folder_path=None,
+    prefix_str="",
+    dry_run=False,
 ):
     """
     Specify how to split datasets
@@ -319,7 +334,9 @@ def split_dataset(
     normal_count = len(normal)
     anomalous_count = len(anomalous)
 
-    train_count_normals = int(train_frac_normals * normal_count)  # int() truncates, so should be fine
+    train_count_normals = int(
+        train_frac_normals * normal_count
+    )  # int() truncates, so should be fine
     train_count_anomalous = int(train_frac_anomalous * anomalous_count)
     eval_count_normals = int(eval_frac_normals * normal_count)
     eval_count_anomalous = int(eval_frac_anomalous * anomalous_count)
@@ -347,15 +364,21 @@ def split_dataset(
 
     # Train set
     df_train = split_set(df, train_count_normals, train_count_anomalous, name="train")
-    df = df[~df['original_index'].isin(df_train['original_index'])]  # remove used samples
+    df = df[
+        ~df["original_index"].isin(df_train["original_index"])
+    ]  # remove used samples
 
     # Eval set
     df_eval = split_set(df, eval_count_normals, eval_count_anomalous, name="eval")
-    df = df[~df['original_index'].isin(df_train['original_index'])]  # remove used samples
+    df = df[
+        ~df["original_index"].isin(df_train["original_index"])
+    ]  # remove used samples
 
     # Test set
     df_test = split_set(df, test_count_normals, test_count_anomalous, name="test")
-    df = df[~df['original_index'].isin(df_train['original_index'])]  # remove used samples
+    df = df[
+        ~df["original_index"].isin(df_train["original_index"])
+    ]  # remove used samples
 
     # Export
     train_path_name = os.path.join(directory_path, f"{prefix_str}-train-{file_name}")

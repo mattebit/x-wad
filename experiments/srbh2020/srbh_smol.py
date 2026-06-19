@@ -2,24 +2,38 @@ import os
 
 from common.eval import print_from_file
 from common.execute import execute
-from common.plot import plot_prediction_samples, plot_eval, plot_roc_curve, plot_pr_curve, plot_train_stats
-from common.utils import MODELS_FOLDER_PATH, split_dataset, default_split_perc, get_dataset_split_paths_names, \
-    get_model_related_paths, get_argument_parser_experiments, model_load_settings_optimized, ALLOW_OPTIMIZATIONS, \
-    model_load_settings_normal
+from common.plot import (
+    plot_prediction_samples,
+    plot_eval,
+    plot_roc_curve,
+    plot_pr_curve,
+    plot_train_stats,
+)
+from common.utils import (
+    MODELS_FOLDER_PATH,
+    split_dataset,
+    default_split_perc,
+    get_dataset_split_paths_names,
+    get_model_related_paths,
+    get_argument_parser_experiments,
+    model_load_settings_optimized,
+    ALLOW_OPTIMIZATIONS,
+    model_load_settings_normal,
+)
 from experiments.srbh2020.tools import preprocess, results_based_on_class_plot
 
 
 def run_experiment(
-        THIS_DATASET_PATH: str,
-        MODELS_FOLDER_PATH=MODELS_FOLDER_PATH,
-        dataset_prefix="standard-causal",
-        do_preprocess=False,
-        do_split=False,
-        do_train=True,
-        do_test=True,
-        do_val=False,
-        do_plot=False,
-        allow_optimizations=ALLOW_OPTIMIZATIONS
+    THIS_DATASET_PATH: str,
+    MODELS_FOLDER_PATH=MODELS_FOLDER_PATH,
+    dataset_prefix="standard-causal",
+    do_preprocess=False,
+    do_split=False,
+    do_train=True,
+    do_test=True,
+    do_val=False,
+    do_plot=False,
+    allow_optimizations=ALLOW_OPTIMIZATIONS,
 ):
     TRUTH_DATASET_NAME = "srbh.requests"
     TRUTH_DATASET_PATH = os.path.join(THIS_DATASET_PATH, TRUTH_DATASET_NAME)
@@ -28,29 +42,36 @@ def run_experiment(
         # preprocess dataset
         preprocess(
             os.path.join(THIS_DATASET_PATH, "original", "data_capec_multilabel.csv"),
-            os.path.join(THIS_DATASET_PATH, "srbh.requests"))
+            os.path.join(THIS_DATASET_PATH, "srbh.requests"),
+        )
 
     if do_split:
         split_dataset(
             TRUTH_DATASET_NAME,
             **default_split_perc,
             dataset_folder_path=THIS_DATASET_PATH,
-            prefix_str=dataset_prefix
+            prefix_str=dataset_prefix,
         )
 
-    (TRAIN_DATASET_PATH,
-     TRAIN_DATASET_NAME,
-     VALIDATION_DATASET_PATH,
-     VALIDATION_DATASET_NAME,
-     TEST_DATASET_PATH,
-     TEST_DATASET_NAME) = get_dataset_split_paths_names(TRUTH_DATASET_PATH, dataset_prefix)
+    (
+        TRAIN_DATASET_PATH,
+        TRAIN_DATASET_NAME,
+        VALIDATION_DATASET_PATH,
+        VALIDATION_DATASET_NAME,
+        TEST_DATASET_PATH,
+        TEST_DATASET_NAME,
+    ) = get_dataset_split_paths_names(TRUTH_DATASET_PATH, dataset_prefix)
 
     base_model = "SmolLM2-360M"
     OUTPUT_MODEL_NAME = f"{base_model}-f-srbh"
-    (EVALUATIONS_FOLDER_PATH,
-     PREDICTIONS_FOLDER_PATH,
-     PREDICT_FILE_PATH,
-     EVAL_FILE_PATH) = get_model_related_paths(MODELS_FOLDER_PATH, OUTPUT_MODEL_NAME, TEST_DATASET_NAME)
+    (
+        EVALUATIONS_FOLDER_PATH,
+        PREDICTIONS_FOLDER_PATH,
+        PREDICT_FILE_PATH,
+        EVAL_FILE_PATH,
+    ) = get_model_related_paths(
+        MODELS_FOLDER_PATH, OUTPUT_MODEL_NAME, TEST_DATASET_NAME
+    )
 
     execute(
         TRAIN_DATASET_PATH,
@@ -71,7 +92,7 @@ def run_experiment(
             "eval_steps": 200,
             "load_best_model_at_end": True,
             "metric_for_best_model": "eval_loss",
-            "early_stop": True
+            "early_stop": True,
         },
         predict_dataset_path=TEST_DATASET_PATH,
         validate_dataset_path=VALIDATION_DATASET_PATH,
@@ -79,7 +100,9 @@ def run_experiment(
         predict_batch_size=12,
         truth_dataset_path=TRUTH_DATASET_PATH,
         task="causal",
-        model_load_settings=model_load_settings_optimized if allow_optimizations else model_load_settings_normal
+        model_load_settings=model_load_settings_optimized
+        if allow_optimizations
+        else model_load_settings_normal,
     )
 
     generic_title = f"f {base_model} SRBH causal"
@@ -94,7 +117,7 @@ def run_experiment(
                 title=generic_title,
                 hide_anomalous=False,
                 hide_normal=False,
-                metric="loss"
+                metric="loss",
             )
         except Exception as e:
             print(e)
@@ -103,7 +126,9 @@ def run_experiment(
 
         plot_roc_curve(EVAL_FILE_PATH, generic_title)
         plot_pr_curve(EVAL_FILE_PATH, generic_title)
-        plot_train_stats(os.path.join(MODELS_FOLDER_PATH, OUTPUT_MODEL_NAME), generic_title)
+        plot_train_stats(
+            os.path.join(MODELS_FOLDER_PATH, OUTPUT_MODEL_NAME), generic_title
+        )
         plot_eval(EVAL_FILE_PATH, title=f"{generic_title} F1-FN", x_metric="fn")
         plot_eval(EVAL_FILE_PATH, title=f"{generic_title} F1-threshold")
 
@@ -111,7 +136,7 @@ def run_experiment(
             EVAL_FILE_PATH,
             TRUTH_DATASET_PATH,
             plot=True,
-            title="SRBH causal evaluation: False Negatives by anomaly class"
+            title="SRBH causal evaluation: False Negatives by anomaly class",
         )
 
 
@@ -127,5 +152,5 @@ if __name__ == "__main__":
         do_test=args.do_test,
         do_train=args.do_train,
         do_val=args.do_val,
-        do_plot=args.do_plot
+        do_plot=args.do_plot,
     )

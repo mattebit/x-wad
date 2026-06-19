@@ -26,9 +26,25 @@ def build_params():
 
 
 # SRBH
-subprocess.run(["python", "-m", "experiments.srbh2020.srbh_modernbert"] + build_params() + [SRBH_DATASET_PATH])
-subprocess.run(["python", "-m", "experiments.srbh2020.srbh_smol"] + build_params() + [SRBH_DATASET_PATH])
+subprocess.run(
+    ["python", "-m", "experiments.srbh2020.srbh_modernbert"]
+    + build_params()
+    + [SRBH_DATASET_PATH]
+)
+subprocess.run(
+    ["python", "-m", "experiments.srbh2020.srbh_smol"]
+    + build_params()
+    + [SRBH_DATASET_PATH]
+)
 
 # SRBH-fix
-subprocess.run(["python", "-m", "experiments.srbh2020.srbh_fix_modernbert_s"] + build_params() + [SRBH_DATASET_PATH])
-subprocess.run(["python", "-m", "experiments.srbh2020.srbh_fix_smol_s"] + build_params() + [SRBH_DATASET_PATH])
+subprocess.run(
+    ["python", "-m", "experiments.srbh2020.srbh_fix_modernbert_s"]
+    + build_params()
+    + [SRBH_DATASET_PATH]
+)
+subprocess.run(
+    ["python", "-m", "experiments.srbh2020.srbh_fix_smol_s"]
+    + build_params()
+    + [SRBH_DATASET_PATH]
+)

@@ -1,9 +1,9 @@
-'''
+"""
 Original Copyright (c) 2022 Kathrin Seßler and Vadim Borisov. Licensed under the MIT License.
 Part of code is adapted from the GReaT repository (https://github.com/kathrinse/be_great/tree/main)
 Modifications Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 Further modifications Copyright 2026 Matteo Bitussi
-'''
+"""
 
 from typing import Optional, Union
 
@@ -17,7 +17,9 @@ from common.predict import get_loss_masked_batch
 
 
 class TrainerMasked(Trainer):
-    def get_eval_dataloader(self, eval_dataset: Optional[Union[str, Dataset]] = None) -> DataLoader:
+    def get_eval_dataloader(
+        self, eval_dataset: Optional[Union[str, Dataset]] = None
+    ) -> DataLoader:
         if eval_dataset is None:
             eval_dataset = self.eval_dataset
 
@@ -32,14 +34,14 @@ class TrainerMasked(Trainer):
             collate_fn=data_collator,
             drop_last=self.args.dataloader_drop_last,
             num_workers=self.args.dataloader_num_workers,
-            pin_memory=self.args.dataloader_pin_memory
+            pin_memory=self.args.dataloader_pin_memory,
         )
 
     def evaluate(
-            self,
-            eval_dataset: Optional[Union[Dataset, dict[str, Dataset]]] = None,
-            ignore_keys: Optional[list[str]] = None,
-            metric_key_prefix: str = "eval",
+        self,
+        eval_dataset: Optional[Union[Dataset, dict[str, Dataset]]] = None,
+        ignore_keys: Optional[list[str]] = None,
+        metric_key_prefix: str = "eval",
     ):
         # Use the modified eval dataloader to not remove the label column
         eval_dataloader = self.get_eval_dataloader(eval_dataset)
@@ -54,12 +56,14 @@ class TrainerMasked(Trainer):
 
         # evaluation loop
         for step, inputs in enumerate(eval_dataloader):
-            all_labels.extend(inputs.pop("anomalous"))  # Take the label and remove it before inference
+            all_labels.extend(
+                inputs.pop("anomalous")
+            )  # Take the label and remove it before inference
 
             inputs_clear = {
                 "input_ids": inputs["input_ids"],
                 "labels": inputs["labels"],
-                "attention_mask": inputs["attention_mask"]
+                "attention_mask": inputs["attention_mask"],
             }
 
             inputs = self._prepare_inputs(inputs_clear)
@@ -68,7 +72,9 @@ class TrainerMasked(Trainer):
                 outputs = self.model(**inputs)
                 logits = outputs.logits  # Shape: (batch_size, seq_len, vocab_size)
 
-                per_sample_loss, per_sample_perplexity = get_loss_masked_batch(inputs, logits)
+                per_sample_loss, per_sample_perplexity = get_loss_masked_batch(
+                    inputs, logits
+                )
 
                 all_loss.extend(per_sample_loss)
                 all_perplexity.extend(per_sample_perplexity)
@@ -106,15 +112,19 @@ class TrainerMasked(Trainer):
             "perplexity_normal": perplexity_normal,
             "perplexity_anomalous": perplexity_anomaly,
             "loss_normal": eval_loss_normal,
-            "loss_anomalous": eval_loss_anomaly
+            "loss_anomalous": eval_loss_anomaly,
         }
 
         # Add the prefix (e.g., "eval_") to all keys
-        return_metrics = {f"{metric_key_prefix}_{k}": v for k, v in return_metrics.items()}
+        return_metrics = {
+            f"{metric_key_prefix}_{k}": v for k, v in return_metrics.items()
+        }
 
         # Log the metrics
         self.log(return_metrics)
         self._memory_tracker.stop_and_update_metrics(return_metrics)
-        self.callback_handler.on_evaluate(self.args, self.state, self.control, return_metrics)
+        self.callback_handler.on_evaluate(
+            self.args, self.state, self.control, return_metrics
+        )
 
         return return_metrics
