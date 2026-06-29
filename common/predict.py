@@ -510,7 +510,7 @@ def get_loss_perplexity_causal_batch(
         reduction="none", ignore_index=-100
     )  # Define loss function
 
-    labels = inputs["input_ids"]
+    labels = inputs["input_ids"].clone()
 
     # Ignore padding tokens
     labels[labels == pad_token_id] = -100
@@ -539,22 +539,37 @@ def get_loss_perplexity_causal_batch(
     valid_mask = (shift_labels != -100).float()
     valid_token_count = valid_mask.sum(dim=1)
 
-    per_sample_loss_all = per_token_loss * valid_mask
+    per_sample_loss_all = per_token_loss * valid_mask  # TODO: not needed?
 
     # Add a small epsilon to avoid division by zero
     per_sample_loss = per_sample_loss_sum / (valid_token_count + 1e-9)
 
     # Calculate Perplexity
     per_sample_perplexity = torch.exp(per_sample_loss)
+    per_sample_perplexity_all = torch.exp(per_sample_loss_all)
 
     if return_not_sum:
+        # This code manages the missing first token to align correctly the output length for explainability
+        # Create a column of zeros with shape (batch_size, 1) to match the batch dimension
+        zero_padding = torch.zeros((batch_size, 1), device=per_token_loss.device)
+        one_padding = torch.ones((batch_size, 1), device=per_token_loss.device)
+
+        # Prepend to the sequence dimension (dim=1)
+        per_sample_loss_all = torch.cat(
+            [zero_padding, per_token_loss * valid_mask], dim=1
+        )
+        per_sample_perplexity_all = torch.cat(
+            [one_padding, torch.exp(per_token_loss * valid_mask)], dim=1
+        )
+
         return (
             per_sample_loss,
             per_sample_perplexity,
             per_sample_loss_all,
-            torch.exp(per_sample_loss_all),
+            per_sample_perplexity_all,
         )
 
+    # Note that per_sample_loss and perplexity are not influenced by extra loss values added for padding
     return per_sample_loss, per_sample_perplexity
 
 
