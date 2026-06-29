@@ -7,7 +7,6 @@ from transformers import (
 )
 from transformers import EarlyStoppingCallback
 
-from common.TrainerCausal import TrainerCausal
 from common.utils import (
     get_checkpoint,
     get_max_context_size,
@@ -27,6 +26,7 @@ def finetune(
     collator_settings_mlm=mlm_default_collator_config_train,
     auto_resume_from_checkpoint=True,
     model_load_settings=None,
+    override_trainer=None,
 ):
     # Check if early stop is asked in the training arguments
     if "early_stop" in finetune_training_args.keys():
@@ -34,6 +34,7 @@ def finetune(
     else:
         early_stop = None
 
+    # Load original tokenizer and model
     tokenizer = AutoTokenizer.from_pretrained(source_model_path)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -45,6 +46,7 @@ def finetune(
         len(tokenizer)
     )  # shouldn't be necessary if no tokens are added
 
+    # Load train and validation datasets
     train_dataset = load_dataset("csv", data_files={"train": train_dataset_path})
     train_dataset["train"] = train_dataset["train"].remove_columns(
         "anomalous"
@@ -104,16 +106,21 @@ def finetune(
         **trainer_base_args, output_dir=output_model_path, **finetune_training_args
     )
 
-    trainer = TrainerCausal(
-        model=model,
-        args=training_arguments,
-        data_collator=data_collator,
-        train_dataset=tokenized_dataset_train["train"],
-        eval_dataset=tokenized_dataset_eval["evaluation"]
+    trainer_args = {
+        "model": model,
+        "args": training_arguments,
+        "data_collator": data_collator,
+        "train_dataset": tokenized_dataset_train["train"],
+        "eval_dataset": tokenized_dataset_eval["evaluation"]
         if eval_dataset_path is not None
         else None,
-        callbacks=callbacks,
-    )
+        "callbacks": callbacks,
+    }
+
+    if override_trainer is not None:
+        trainer = override_trainer(**trainer_args)
+    else:
+        trainer = trainer(**trainer_args)
 
     # Check if there are any existing checkpoints in the output directory
     if auto_resume_from_checkpoint:

@@ -35,6 +35,7 @@ def train_model(
     model_name="ModernBERT-large",
     model_is_mlm=True,
     model_load_settings=model_load_settings_normal,
+    override_trainer=None,
 ):
     """
     Trains a model from scratch starting from its initial configuration
@@ -183,14 +184,19 @@ def train_model(
         )
         callbacks.append(early_stopping_callback)
 
-    trainer = Trainer(
-        model=model,
-        args=training_args_,
-        data_collator=data_collator,
-        train_dataset=tokenized_dataset["train"],
-        eval_dataset=tokenized_dataset["evaluation"],
-        callbacks=callbacks,
-    )
+    trainer_args = {
+        "model": model,
+        "args": training_args_,
+        "data_collator": data_collator,
+        "train_dataset": tokenized_dataset["train"],
+        "eval_dataset": tokenized_dataset["evaluation"],
+        "callbacks": callbacks,
+    }
+
+    if override_trainer is not None:
+        trainer = override_trainer(**trainer_args)
+    else:
+        trainer = Trainer(**trainer_args)
 
     print("Starting training...")
 
