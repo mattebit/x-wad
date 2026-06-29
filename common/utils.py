@@ -7,6 +7,7 @@ import torch
 from pandas import DataFrame
 
 from dotenv import load_dotenv
+from transformers.trainer_utils import get_last_checkpoint
 
 load_dotenv()
 
@@ -29,7 +30,7 @@ except Exception:
 
 trainer_base_args = {
     "save_strategy": "steps",  # Save checkpoint every save_steps
-    "save_steps": 200,
+    "save_steps": 50,
     "save_total_limit": 2,
     "bf16": True,  # Improves performance, better than fp16, works with RTX3090
     "logging_steps": 1,
@@ -268,7 +269,7 @@ def check_and_create_file(file_path: str, create_if_missing: bool = False) -> bo
                 pass  # The file is created but remains empty.
 
             return True
-        except OSError as e:
+        except OSError:
             return False
     return False
 
@@ -386,7 +387,167 @@ def split_dataset(
     test_path_name = os.path.join(directory_path, f"{prefix_str}-test-{file_name}")
 
     if not dry_run:
-        df_train.to_csv(train_path_name)
-        df_eval.to_csv(eval_path_name)
-        df_test.to_csv(test_path_name)
+        df_train.to_csv(train_path_name, index=False)
+        df_eval.to_csv(eval_path_name, index=False)
+        df_test.to_csv(test_path_name, index=False)
     return 0
+
+
+def get_max_context_size(model) -> int:
+    """Get a model maximum context size
+
+    Args:
+        model (_type_): The model object
+
+    Returns:
+        int: The maximum context size
+    """
+    return (
+        getattr(
+            model.config, "max_position_embeddings", None
+        )  # LLaMA, Mistral, Opt, etc.
+        or getattr(model.config, "n_positions", None)  # GPT-2
+        or getattr(model.config, "n_ctx", None)  # Older GPT variants
+    )
+
+
+def prepare_dataset(
+    dataset,
+    tokenizer,
+    max_context_size,
+    divide_samples=True,
+    tokenizer_args={},
+    column_name="text",
+):
+    """Function used to prepare a dataset for training or inference. Two methods are available:
+    divide_samples = False -> all samples in dataset are concatenated without any special token in between
+    divide_samples = True -> samples in dataset are concatenated with a special token in between to separate their context
+    This function guarantees that no samples are splitted along blocks (apart from samples longer than block size)
+
+    Args:
+        dataset: The dataset object to be processed
+        tokenizer: The tokenizer to be used for tokenization
+        max_context_size: The model's maximum context size
+        divide_samples (bool, optional): Which method to be used. Defaults to True.
+        tokenizer_args (optional): Tokenizer arguments to pass to the tokenizer
+        column_name: The column name of the content in the dataset
+    """
+
+    # Ensure the tokenizer has a pad token assigned
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    def pack_logs_to_max_context(examples, block_size=4096):
+        result = {k: [] for k in examples.keys()}
+        result["labels"] = []
+
+        current_chunks = {k: [] for k in examples.keys()}
+        current_length = 0
+
+        num_samples = len(examples["input_ids"])
+
+        if tokenizer.eos_token_id is None:
+            # If tokenizer doesn't have EOS token, it is probably a MLM based model
+            # It should use SEP as a separator betwen sentences
+            separator_token = tokenizer.sep_token_id
+        else:
+            # If EOS is present use EOS, which means CLM-based model
+            separator_token = tokenizer.eos_token_id
+
+        for i in range(num_samples):
+            # Prepare the current sample
+            current_sample = {}
+            for k in examples.keys():
+                seq = examples[k][i]
+
+                # If True, inject the EOS token to separate contexts
+                if divide_samples:
+                    if k == "input_ids":
+                        seq = seq + [separator_token]
+                    elif k == "attention_mask":
+                        seq = seq + [1]  # Attention should be active on the EOS token
+                    else:
+                        seq = seq + [0]  # Safe fallback for token_type_ids, etc.
+
+                current_sample[k] = seq
+
+            sample_len = len(current_sample["input_ids"])
+
+            # Edge Case: A single sample is larger than the block_size
+            if sample_len > block_size:
+                if current_length > 0:
+                    pad_len = block_size - current_length
+                    for k in examples.keys():
+                        pad_val = tokenizer.pad_token_id if k == "input_ids" else 0
+                        result[k].append(current_chunks[k] + [pad_val] * pad_len)
+                    result["labels"].append(
+                        current_chunks["input_ids"] + [-100] * pad_len
+                    )
+
+                    current_chunks = {k: [] for k in examples.keys()}
+                    current_length = 0
+
+                # Truncate and flush oversized sample
+                for k in examples.keys():
+                    result[k].append(current_sample[k][:block_size])
+                result["labels"].append(current_sample["input_ids"][:block_size])
+                continue
+
+            # If adding this sample exceeds block_size, pad and save the current chunk
+            if current_length + sample_len > block_size:
+                pad_len = block_size - current_length
+                for k in examples.keys():
+                    pad_val = tokenizer.pad_token_id if k == "input_ids" else 0
+                    result[k].append(current_chunks[k] + [pad_val] * pad_len)
+
+                result["labels"].append(current_chunks["input_ids"] + [-100] * pad_len)
+
+                current_chunks = {k: [] for k in examples.keys()}
+                current_length = 0
+
+            # Accumulate the current sample into the current chunk
+            for k in examples.keys():
+                current_chunks[k].extend(current_sample[k])
+            current_length += sample_len
+
+        # Flush any remaining tokens in the final chunk
+        if current_length > 0:
+            pad_len = block_size - current_length
+            for k in examples.keys():
+                pad_val = tokenizer.pad_token_id if k == "input_ids" else 0
+                result[k].append(current_chunks[k] + [pad_val] * pad_len)
+
+            result["labels"].append(current_chunks["input_ids"] + [-100] * pad_len)
+
+        return result
+
+    def tokenize_function(examples):
+        return tokenizer(examples[column_name], **tokenizer_args)
+
+    tokenized_dataset = dataset.map(
+        tokenize_function,
+        batched=True,
+        num_proc=get_cpu_count(),
+        remove_columns=[column_name],
+    )
+
+    packed_dataset = tokenized_dataset.map(
+        pack_logs_to_max_context,
+        batched=True,
+        fn_kwargs={"block_size": max_context_size},
+        num_proc=get_cpu_count(),
+    )
+
+    return packed_dataset
+
+
+def get_checkpoint(output_model_path):
+    checkpoint = None
+    if os.path.isdir(output_model_path):
+        last_checkpoint = get_last_checkpoint(output_model_path)
+        if last_checkpoint is not None:
+            print(f"Checkpoint found. Resuming training from: {last_checkpoint}")
+            print("Warning, provided model config will be ignored")
+            checkpoint = last_checkpoint
+
+    return checkpoint
