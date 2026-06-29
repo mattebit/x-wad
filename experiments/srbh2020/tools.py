@@ -272,7 +272,7 @@ def results_based_on_class_plot(
 
         plt.legend()
         plt.subplots_adjust(bottom=0.3)
-        plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"anomaly_results_comparison.pdf"))
+        plt.savefig(os.path.join(IMAGES_FOLDER_PATH, "anomaly_results_comparison.pdf"))
         plt.show()
 
 
@@ -335,7 +335,7 @@ def anomaly_per_class_plot(truth_file, plot=False, title=""):
         plt.legend()
         plt.subplots_adjust(bottom=0.35)
 
-        plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"anomaly_results.pdf"))
+        plt.savefig(os.path.join(IMAGES_FOLDER_PATH, "anomaly_results.pdf"))
         plt.show()
 
 
@@ -503,9 +503,9 @@ def fix_srbh(
 
     df_misslabeled = df[df["original_index"].isin(wrong_fp_indexes)]
     df_misslabeled = df_misslabeled["original_index"]
-    df_misslabeled.to_csv(output_mislabeled)
+    df_misslabeled.to_csv(output_mislabeled, index=False)
 
     print(
         f"Tot wrong: {len(wrong_fp_indexes)} over {len(df)} FP: {len(wrong_fp_indexes) / len(df)}"
     )
-    df_fix.to_csv(output_fix)
+    df_fix.to_csv(output_fix, index=False)

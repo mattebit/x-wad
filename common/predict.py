@@ -89,13 +89,20 @@ def prepare_explained_string(
     tokens,
     print_output="terminal",
     gradient=True,
+    contrast_factor=1,
 ) -> str:
-    """
-    Function used to prepare the explained strings in the format specified with the "print_output" parameter.
-    :param token_probabilities: The list of token probabilities
-    :param tokens: The tokens list in string format
-    :param print_output: The output format of the explained string (terminal, html, latex, latex_text)
-    :param gradient: If set to true uses a gradient coloring, otherwise it uses the percentile-based coloring
+    """Function used to prepare the explained strings in the format specified with the "print_output" parameter.
+
+
+    Args:
+        token_probabilities (_type_):  The list of token probabilities
+        tokens (_type_): The tokens list in string format
+        print_output (str, optional): The output format of the explained string (terminal, html, latex, latex_text). Defaults to "terminal".
+        gradient (bool, optional): If set to true uses a gradient coloring, otherwise it uses the percentile-based coloring. Defaults to True.
+        contrast_factor (int, optional): A factor used to isolate rare events during coloring, set it <0. Defaults to 1 means no contrast applied.
+
+    Returns:
+        str: the explained string
     """
     log_string = ""
 
@@ -140,6 +147,11 @@ def prepare_explained_string(
             continue
 
         actual_token_probability = float(token_id)
+
+        def squeeze(x, factor):
+            return x**factor
+
+        actual_token_probability = squeeze(actual_token_probability, contrast_factor)
 
         if gradient:
             anomaly_hex_value = f"{round((1 - actual_token_probability) * 255):02x}"
@@ -472,7 +484,7 @@ def get_batch_predictions_masked_strided(
     if log_times:
         df_times = pandas.DataFrame(times)
         df_times = df_times.groupby("original_index", as_index=False).sum()
-        df_times.to_csv(log_times_output_filename)
+        df_times.to_csv(log_times_output_filename, index=False)
 
     # calculate average results based on original_index
     df_res = pandas.DataFrame(results_accumulator)
@@ -504,8 +516,8 @@ def get_loss_perplexity_causal_batch(
     labels[labels == pad_token_id] = -100
 
     # Shift logits and labels for Causal LM
-    shift_logits = logits[..., :-1, :].contiguous()
-    shift_labels = labels[..., 1:].contiguous()
+    shift_logits = logits[..., :-1, :].contiguous()  # take all logits except last one
+    shift_labels = labels[..., 1:].contiguous()  # tale all labels from the second one
 
     # Flatten the tensors to compute the loss
     batch_size, seq_len = shift_logits.shape[:2]
@@ -638,7 +650,7 @@ def get_batch_predictions_causal(
 
     if log_times:
         df_times = pandas.DataFrame(times)
-        df_times.to_csv(log_times_output_filename)
+        df_times.to_csv(log_times_output_filename, index=False)
 
     df_out = pandas.DataFrame(data=results)
     df_out.to_csv(output_path, index=False)
@@ -749,7 +761,7 @@ def estimate_threshold_from_predictions(
             plt.ylabel("Probability density")
             plt.xlim([-0.01, 0.2])
             plt.legend()
-            plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"threshold_est.pdf"))
+            plt.savefig(os.path.join(IMAGES_FOLDER_PATH, "threshold_est.pdf"))
             plt.show()
 
     elif method == "percentile":
@@ -787,7 +799,7 @@ def estimate_threshold_from_predictions(
             plt.legend()
             plt.tight_layout()
             print(os.getcwd())
-            plt.savefig(os.path.join(IMAGES_FOLDER_PATH, f"threshold_est.pdf"))
+            plt.savefig(os.path.join(IMAGES_FOLDER_PATH, "threshold_est.pdf"))
             plt.show()
 
     return thres

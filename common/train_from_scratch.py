@@ -159,7 +159,7 @@ def train_model(
         last_checkpoint = get_last_checkpoint(model_output_dir)
         if last_checkpoint is not None:
             print(f"Checkpoint found. Resuming training from: {last_checkpoint}")
-            print(f"Warning, provided model config will be ignored")
+            print("Warning, provided model config will be ignored")
             checkpoint = last_checkpoint
 
     if "torch_compile" in trainer_base_args.keys():

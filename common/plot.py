@@ -3,7 +3,6 @@ import itertools
 import math
 import multiprocessing
 import os
-from typing import Optional, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -516,7 +515,7 @@ def plot_theshold_k_estimation(
 
     df = pd.DataFrame({"k": ks, "FPR": fprs})
 
-    df.to_csv("out.csv")
+    df.to_csv("out.csv", index=False)
 
     fig, ax1 = plt.subplots()
 

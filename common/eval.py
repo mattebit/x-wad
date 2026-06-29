@@ -288,7 +288,7 @@ def evaluate(
             ]
         )
 
-    df_out.to_csv(results_file_path)
+    df_out.to_csv(results_file_path, index=False)
 
     if print_to_console:
         print_from_file(results_file_path)
