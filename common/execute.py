@@ -3,7 +3,7 @@ from pathlib import Path
 
 from common import utils
 from common.eval import evaluate, get_AUC_ROC_from_predictions
-from common.fine_tune import finetune_masked, finetune_causal
+from common.fine_tune import finetune
 from common.predict import (
     get_batch_predictions_masked_strided,
     get_batch_predictions_causal,
@@ -82,10 +82,6 @@ def execute(
     check_and_create_file(train_dataset_path)
     check_and_create_file(models_folder_path)
 
-    if validate_dataset_path is None:
-        print("Warning! evaluation dataset automatically set to train dataset")
-        validate_dataset_path = train_dataset_path
-
     OUTPUT_MODEL_PATH = os.path.join(models_folder_path, output_model_name)
 
     # Logging settings
@@ -137,27 +133,18 @@ def execute(
         train_finetuning_args_ok = train_finetuning_args | mandatory_training_args
 
         FINETUNE_MODEL_PATH = os.path.join(models_folder_path, base_model_name)
-        if task == "mlm":
-            finetune_masked(
-                train_dataset_path,
-                FINETUNE_MODEL_PATH,
-                OUTPUT_MODEL_PATH,
-                train_finetuning_args_ok,
-                eval_dataset_path=validate_dataset_path,
-                collator_settings=mlm_default_collator_config_train,
-                auto_resume_from_checkpoint=train_resume_from_checkpoint,
-                model_load_settings=model_load_settings,
-            )
-        else:
-            finetune_causal(
-                train_dataset_path,
-                FINETUNE_MODEL_PATH,
-                OUTPUT_MODEL_PATH,
-                train_finetuning_args_ok,
-                eval_dataset_path=validate_dataset_path,
-                auto_resume_from_checkpoint=train_resume_from_checkpoint,
-                model_load_settings=model_load_settings,
-            )
+
+        finetune(
+            train_dataset_path,
+            FINETUNE_MODEL_PATH,
+            OUTPUT_MODEL_PATH,
+            train_finetuning_args_ok,
+            task == "mlm",
+            eval_dataset_path=validate_dataset_path,
+            collator_settings_mlm=mlm_default_collator_config_train,  # TODO: parametrize ?
+            auto_resume_from_checkpoint=train_resume_from_checkpoint,
+            model_load_settings=model_load_settings,
+        )
 
     prediction_dataset_path = (
         train_dataset_path if predict_dataset_path is None else predict_dataset_path
