@@ -72,7 +72,8 @@ default_split_perc = {
 
 model_load_settings_normal = {
     # "local_files_only": True,
-    "dtype": torch.float16,
+    "dtype": torch.bfloat16,
+    "attn_implementation": "eager",  # Setting it to "eager" forces the model to use standard PyTorch operations. Crucially, PyTorch's eager/math attention backend automatically detects BF16 inputs and upcasts the intermediate attention and softmax matrix to FP32 for stability.
     "device_map": "cuda",
     # "use_cache":False
 }
@@ -423,6 +424,7 @@ def prepare_dataset(
     divide_samples = False -> all samples in dataset are concatenated without any special token in between
     divide_samples = True -> samples in dataset are concatenated with a special token in between to separate their context
     This function guarantees that no samples are splitted along blocks (apart from samples longer than block size)
+    # TODO: add position IDS and attention mask fix when using divide_samples=True, otherwise this will not work correctly
 
     Args:
         dataset: The dataset object to be processed
@@ -436,6 +438,19 @@ def prepare_dataset(
     # Ensure the tokenizer has a pad token assigned
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    # Clean dataset by removeing non essential columns
+
+    # Define the essential columns you want to keep
+    essential_columns = {"input_ids", "attention_mask", "labels", column_name}
+
+    # Identify the columns to remove by finding the difference
+    columns_to_remove = [
+        col for col in dataset.column_names if col not in essential_columns
+    ]
+
+    # Drop the non-essential columns
+    cleaned_dataset = dataset.remove_columns(columns_to_remove)
 
     def pack_logs_to_max_context(examples, block_size=4096):
         result = {k: [] for k in examples.keys()}
@@ -467,7 +482,7 @@ def prepare_dataset(
                     elif k == "attention_mask":
                         seq = seq + [1]  # Attention should be active on the EOS token
                     else:
-                        seq = seq + [0]  # Safe fallback for token_type_ids, etc.
+                        continue  # Ignore other columns
 
                 current_sample[k] = seq
 
@@ -524,7 +539,7 @@ def prepare_dataset(
     def tokenize_function(examples):
         return tokenizer(examples[column_name], **tokenizer_args)
 
-    tokenized_dataset = dataset.map(
+    tokenized_dataset = cleaned_dataset.map(
         tokenize_function,
         batched=True,
         num_proc=get_cpu_count(),
