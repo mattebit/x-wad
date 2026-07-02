@@ -9,6 +9,7 @@ from transformers import EarlyStoppingCallback
 
 from common.utils import (
     get_checkpoint,
+    get_cpu_count,
     get_max_context_size,
     prepare_dataset,
     trainer_base_args,
@@ -47,40 +48,37 @@ def finetune(
     )  # shouldn't be necessary if no tokens are added
 
     # Load train and validation datasets
-    train_dataset = load_dataset("csv", data_files={"train": train_dataset_path})
-    train_dataset["train"] = train_dataset["train"].remove_columns(
-        "anomalous"
-    )  # remove label column
-    train_dataset.select_columns(["request"])
+    def tokenize_function(examples):
+        return tokenizer(examples["request"])
 
-    tokenized_dataset_train = prepare_dataset(
-        train_dataset,
-        tokenizer,
-        get_max_context_size(model),
-        divide_samples=True,
-        column_name="request",
+    train_dataset = load_dataset("csv", data_files={"train": train_dataset_path})
+    train_dataset.select_columns(["request"])
+    eval_dataset = load_dataset("csv", data_files={"evaluation": eval_dataset_path})
+
+    # Remove useless columns
+    columns_to_remove = []
+    for c in eval_dataset["evaluation"].column_names:
+        if c not in ["request", "anomalous", "evaluation"]:
+            columns_to_remove.append(c)
+
+    eval_dataset["evaluation"] = eval_dataset["evaluation"].remove_columns(
+        columns_to_remove
+    )
+    eval_dataset.select_columns(["request", "anomalous"])
+
+    tokenized_dataset_train = train_dataset.map(
+        tokenize_function,
+        batched=True,
+        num_proc=get_cpu_count(),
+        remove_columns=["request"],
     )
 
-    if eval_dataset_path is not None:
-        eval_dataset = load_dataset("csv", data_files={"evaluation": eval_dataset_path})
-        # Remove useless columns
-        columns_to_remove = []
-        for c in eval_dataset["evaluation"].column_names:
-            if c not in ["request", "anomalous", "evaluation"]:
-                columns_to_remove.append(c)
-
-        eval_dataset["evaluation"] = eval_dataset["evaluation"].remove_columns(
-            columns_to_remove
-        )
-        eval_dataset.select_columns(["request", "anomalous"])
-
-        tokenized_dataset_eval = prepare_dataset(
-            train_dataset,
-            tokenizer,
-            get_max_context_size(model),
-            divide_samples=True,
-            column_name="request",
-        )
+    tokenized_dataset_eval = eval_dataset.map(
+        tokenize_function,
+        batched=True,
+        num_proc=get_cpu_count(),
+        remove_columns=["request"],
+    )
 
     # Differentiate between CLM and MLM
     if model_is_mlm:
